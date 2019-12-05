@@ -1,0 +1,23 @@
+{
+  "name": "bysykkel",
+  "oauth": {
+    "auth_database": "postgresql://bysykkel:bysykkel@localhost/bysykkel",
+    "clients": {
+      "bysykkel": {
+        "client_id": "abc-no-more",
+        "client_secret": "xyz",
+        "redirect_uris": [
+          "http://localhost/bysykkel-api/#login"
+        ]
+      }
+    }
+  },
+  "database": "postgresql://bysykkel:bysykkel@localhost/bysykkel",
+  "logfile": "api.log",
+  "server": {
+    "port": 8081,
+    "template_path": "templates",
+    "debug": false
+  }
+}
+
