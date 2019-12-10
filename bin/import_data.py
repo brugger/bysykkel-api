@@ -1,4 +1,5 @@
-#!/home/brugger/projects/citybike/venv/bin/python3.7
+#!/usr/bin/env python3
+
 
 
 import argparse
