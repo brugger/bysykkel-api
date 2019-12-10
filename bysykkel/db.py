@@ -10,7 +10,7 @@ class DB(object):
         if self._db is not None:
             self._db.close()
 
-    def station_add(self, station_id:int, name:str, lat:float, lon:float, capacity:int) -> int:
+    def station_add(self, station_id:int, name:str, lat:float=None, lon:float=None, capacity:int=None) -> int:
 
         return self._db.add_unique('station', {'station_id':station_id, 'name':name, 'lat': lat, 'lon': lon, 'capacity':capacity}, key='name')
 
@@ -26,7 +26,7 @@ class DB(object):
     def status_add(self, station_id:int, bikes_available:int, docks_available:int, timestamp:int ) -> int:
         return self._db.add('status', {'station_id': station_id, 'bikes_available': bikes_available, 'docks_available': docks_available, 'timestamp': timestamp})
 
-    def stations(self, **values) -> str:
+    def status(self, **values) -> str:
         return self._db.get('status', **values)
 
     def trip_add(self, start_station_id:int, end_station_id:int, start_time:int, end_time:int ) -> int:
