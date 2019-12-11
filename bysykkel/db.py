@@ -32,5 +32,11 @@ class DB(object):
     def trip_add(self, start_station_id:int, end_station_id:int, start_time:int, end_time:int ) -> int:
         return self._db.add('trip', {'start_station_id':start_station_id, 'end_station_id':end_station_id, 'start_time': start_time, 'end_time':end_time})
 
-    def tripss(self, **values) -> str:
+    def trips(self, **values) -> str:
         return self._db.get('trip', **values)
+
+    def weather_add(self, day_stamp:int, mean_temp:float, precipitation:float, mean_humidity:float, mean_wind_speed:float) -> None:
+        return self._db.add('weather', {'day_stamp': day_stamp, 'mean_temp': mean_temp, 'precipitation':precipitation, 'mean_humidity':mean_humidity, 'mean_wind_speed':mean_wind_speed })
+
+    def weather(self, **values) -> str:
+        return self._db.get('weather', **values)

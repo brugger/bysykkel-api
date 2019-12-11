@@ -22,3 +22,13 @@ CREATE TABLE trip (
    start_time integer,
    end_time integer
 );
+
+
+CREATE TABLE weather (
+   id UUID NOT NULL DEFAULT  uuid_generate_v4 () PRIMARY KEY,
+   day_stamp integer NOT NULL,
+   mean_temp float,
+   precipitation float,
+   mean_humidity float,
+   mean_wind_speed float
+);

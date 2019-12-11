@@ -6,7 +6,7 @@ import argparse
 import datetime
 
 import sys
-
+import requests
 
 import pprint as pp
 import re
@@ -24,7 +24,7 @@ import bysykkel.db as bysykkel_db
 import kbr.json_utils as json_utils
 
 
-def date_as_epoch(timestamp:str) -> []:
+def datestr_to_epoch(timestamp:str) -> []:
 
     try:
         ts = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S.%f%z")
@@ -32,6 +32,24 @@ def date_as_epoch(timestamp:str) -> []:
         ts = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S%z")
 
     return ts.timestamp()
+
+
+def weather_datestr_to_epoch(timestamp:str) -> []:
+
+    try:
+        ts = datetime.datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%f%z")
+    except:
+        ts = datetime.datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S%z")
+
+    return ts.timestamp()
+
+
+def day_epoch(ts:int) -> int:
+    timestamp = datetime.datetime.fromtimestamp(ts)
+    stime = "{}-{}-{} 00:00:00".format( timestamp.year, timestamp.month, timestamp.day )
+
+    return datetime.datetime.strptime(stime, "%Y-%m-%d %H:%M:%S").timestamp()
+
 
 
 stations = {}
@@ -76,6 +94,48 @@ def import_status( filename:str) -> None:
                        docks_available=entry['num_docks_available'], timestamp=entry['last_reported'])
 
 
+def extract_weather_info(observations:[]) -> {}:
+    data = {'mean_temp': 0,
+            'precipitation': 0,
+            'mean_humidity': 0,
+            'mean_wind_speed':0}
+
+    for observation in observations:
+        if observation['elementId'] == 'mean(air_temperature P1D)' and observation['timeOffset'] == 'PT0H':
+            data['mean_temp'] = observation['value']
+        elif observation['elementId'] == 'sum(precipitation_amount P1D)' and observation['timeOffset'] == 'PT6H':
+            data['precipitation'] = observation['value']
+        elif observation['elementId'] == 'mean(wind_speed P1D)':
+            data['mean_wind_speed'] = observation['value']
+        elif observation['elementId'] == 'mean(relative_humidity P1D)':
+            data['mean_humidity'] = observation['value']
+
+    return data
+
+
+
+
+def get_weather( timerange:str, client_id:str) -> None:
+    base_url = "https://frost.met.no/observations/v0.jsonld?sources=SN50540&elements=mean(air_temperature%20P1D)%2Cmean(wind_speed%20P1D)%2Csum(precipitation_amount%20P1D)%2Cmean(relative_humidity%20P1D)&referencetime={}"
+    base_url = base_url.format(timerange)
+
+    response = requests.get( base_url, auth=(client_id,'' ))
+    if not response:
+        print('could not fetch weather info')
+
+    weather = response.json()
+    pp.pprint( weather )
+    for day in weather['data']:
+        data = extract_weather_info( day[ 'observations'])
+        print(data)
+        timestr = day['referenceTime']
+        day_stamp = day_epoch( weather_datestr_to_epoch( timestr ))
+        db.weather_add(day_stamp=int(day_stamp), mean_temp=data['mean_temp'], precipitation=data['precipitation'], mean_humidity=data['mean_humidity'], mean_wind_speed=data['mean_wind_speed'])
+
+    if 'nextLink' in response:
+        print("Could not get all values, dont know how to follow next link....\n Sorry future me!")
+
+
 def import_trips( filename:str) -> None:
     data = json_utils.read( filename )
 
@@ -91,14 +151,14 @@ def import_trips( filename:str) -> None:
         end_station_id = get_station_id( int(entry['end_station_id']), name=entry['end_station_name'],
                                          lat=entry['end_station_latitude'], lon=entry['end_station_longitude'])
 
-        db.trip_add( start_station_id=start_station_id,
-                     end_station_id=end_station_id,
-                     start_time=int(date_as_epoch(entry['started_at'])),
-                     end_time=int(date_as_epoch(entry['ended_at'])) )
+        db.trip_add(start_station_id=start_station_id,
+                    end_station_id=end_station_id,
+                    start_time=int(datestr_to_epoch(entry['started_at'])),
+                    end_time=int(datestr_to_epoch(entry['ended_at'])))
 
 def main():
 
-    commands = ['stations', 'status', 'trips', 'help']
+    commands = ['stations', 'status', 'trips', 'weather', 'help']
 
 
     parser = argparse.ArgumentParser(description='bysykkel_import: importing data')
@@ -139,6 +199,9 @@ def main():
     elif command == 'trips':
         args_utils.count(1, len(args.command), msg="import trips require a filename")
         import_trips(args.command.pop(0))
+    elif command == 'weather':
+        args_utils.count(1, len(args.command), msg="import weather require a time-reference eg: 2019-01-01/2019-01-31")
+        get_weather(args.command.pop(0), config.met_client_id)
     else:
         print("The tool support the following commands: {}".format(string_utils.comma_sep( commands )))
         sys.exit( 1 )

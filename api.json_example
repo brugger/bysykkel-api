@@ -1,0 +1,12 @@
+{
+  "name": "bysykkel",
+  "database": "postgresql://<NAME>:<PASSWD>@<HOST>/<DBNAME>",
+  "logfile": "api.log",
+  "server": {
+    "port": 8081,
+    "template_path": "templates",
+    "debug": false
+  },
+  "met_client_id": "<SECRET ID>"
+}
+
